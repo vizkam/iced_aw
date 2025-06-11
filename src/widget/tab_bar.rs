@@ -14,7 +14,7 @@ use iced::{
         widget::Tree,
         Clipboard, Layout, Shell, Widget,
     },
-    alignment::{self, Horizontal, Vertical},
+    alignment::{self, Vertical},
     event,
     mouse::{self, Cursor},
     touch,
@@ -25,10 +25,7 @@ use iced::{
     Alignment, Background, Border, Color, Element, Event, Font, Length, Padding, Pixels, Point,
     Rectangle, Shadow, Size,
 };
-use iced_fonts::{
-    required::{icon_to_string, RequiredIcons},
-    REQUIRED_FONT,
-};
+use iced_fonts::BOOTSTRAP_FONT;
 
 use std::marker::PhantomData;
 
@@ -527,17 +524,17 @@ where
             .layout(tab_tree, renderer, &limits.loose())
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         _state: &mut Tree,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
         _renderer: &Renderer,
         _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         _viewport: &Rectangle,
-    ) -> event::Status {
+    ) {
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
             | Event::Touch(touch::Event::FingerPressed { .. }) => {
@@ -569,12 +566,12 @@ where
                                     |on_close| (on_close)(self.tab_indices[new_selected].clone()),
                                 ),
                         );
-                        return event::Status::Captured;
+                        shell.capture_event();
+                        return;
                     }
                 }
-                event::Status::Ignored
             }
-            _ => event::Status::Ignored,
+            _ => (),
         }
     }
 
@@ -635,7 +632,7 @@ where
                         width: style_sheet.border_width,
                         color: style_sheet.border_color.unwrap_or(Color::TRANSPARENT),
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 style_sheet
                     .background
@@ -653,7 +650,7 @@ where
                 &self.class,
                 i == self.get_active_tab_idx(),
                 cursor,
-                (self.font.unwrap_or(REQUIRED_FONT), self.icon_size),
+                (self.font.unwrap_or(BOOTSTRAP_FONT), self.icon_size),
                 (self.text_font.unwrap_or_default(), self.text_size),
                 self.close_size,
                 viewport,
@@ -721,7 +718,7 @@ fn draw_tab<Theme, Renderer>(
                     width: style.tab_label_border_width,
                     color: style.tab_label_border_color,
                 },
-                shadow: Shadow::default(),
+                ..Default::default()
             },
             style.tab_label_background,
         );
@@ -737,8 +734,8 @@ fn draw_tab<Theme, Renderer>(
                     bounds: Size::new(icon_bounds.width, icon_bounds.height),
                     size: Pixels(icon_data.1),
                     font: icon_data.0,
-                    horizontal_alignment: Horizontal::Center,
-                    vertical_alignment: Vertical::Center,
+                    align_x: text::Alignment::Center,
+                    align_y: Vertical::Center,
                     line_height: LineHeight::Relative(1.3),
                     shaping: iced::advanced::text::Shaping::Advanced,
                     wrapping: Wrapping::default(),
@@ -758,8 +755,8 @@ fn draw_tab<Theme, Renderer>(
                     bounds: Size::new(text_bounds.width, text_bounds.height),
                     size: Pixels(text_data.1),
                     font: text_data.0,
-                    horizontal_alignment: Horizontal::Center,
-                    vertical_alignment: Vertical::Center,
+                    align_x: text::Alignment::Center,
+                    align_y: Vertical::Center,
                     line_height: LineHeight::Relative(1.3),
                     shaping: iced::advanced::text::Shaping::Advanced,
                     wrapping: Wrapping::default(),
@@ -806,8 +803,8 @@ fn draw_tab<Theme, Renderer>(
                     bounds: Size::new(icon_bounds.width, icon_bounds.height),
                     size: Pixels(icon_data.1),
                     font: icon_data.0,
-                    horizontal_alignment: Horizontal::Center,
-                    vertical_alignment: Vertical::Center,
+                    align_x: text::Alignment::Center,
+                    align_y: Vertical::Center,
                     line_height: LineHeight::Relative(1.3),
                     shaping: iced::advanced::text::Shaping::Advanced,
                     wrapping: Wrapping::default(),
@@ -823,8 +820,8 @@ fn draw_tab<Theme, Renderer>(
                     bounds: Size::new(text_bounds.width, text_bounds.height),
                     size: Pixels(text_data.1),
                     font: text_data.0,
-                    horizontal_alignment: Horizontal::Center,
-                    vertical_alignment: Vertical::Center,
+                    align_x: text::Alignment::Center,
+                    align_y: Vertical::Center,
                     line_height: LineHeight::Relative(1.3),
                     shaping: iced::advanced::text::Shaping::Advanced,
                     wrapping: Wrapping::default(),
@@ -842,12 +839,12 @@ fn draw_tab<Theme, Renderer>(
 
         renderer.fill_text(
             iced::advanced::text::Text {
-                content: icon_to_string(RequiredIcons::X),
+                content: char::from_u32(0xF62A).unwrap().to_string(),
                 bounds: Size::new(cross_bounds.width, cross_bounds.height),
                 size: Pixels(close_size + if is_mouse_over_cross { 1.0 } else { 0.0 }),
-                font: REQUIRED_FONT,
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                font: BOOTSTRAP_FONT,
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: LineHeight::Relative(1.3),
                 shaping: iced::advanced::text::Shaping::Advanced,
                 wrapping: Wrapping::default(),
@@ -866,7 +863,7 @@ fn draw_tab<Theme, Renderer>(
                         width: style.border_width,
                         color: style.border_color.unwrap_or(Color::TRANSPARENT),
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 style
                     .icon_background

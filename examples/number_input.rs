@@ -21,19 +21,25 @@ pub enum Message {
 
 fn main() -> iced::Result {
     iced::application(
-        "Number Input example",
+        NumberInputDemo::new,
         NumberInputDemo::update,
         NumberInputDemo::view,
     )
+    .title("Number input example")
     .window_size(iced::Size {
         width: 250.0,
         height: 200.0,
     })
-    .font(iced_fonts::REQUIRED_FONT_BYTES)
     .run()
 }
 
 impl NumberInputDemo {
+    fn new() -> NumberInputDemo {
+        NumberInputDemo {
+            value: u8::default(),
+        }
+    }
+
     fn update(&mut self, message: self::Message) {
         match message {
             Message::NumInpChanged(val) => {

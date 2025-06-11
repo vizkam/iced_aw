@@ -61,16 +61,16 @@ default = [
 [dependencies]
 cfg-if = "1.0"
 chrono = { version = "0.4.39", optional = true, features = ["wasmbind"] }
-iced_fonts = "0.1.1"
+iced_fonts = {git = "https://github.com/Redhawk18/iced_fonts.git", rev="376214da4fe5d01aa45b3043c75c97168ea23e07", features = ["bootstrap"]}
 itertools = { version = "0.14.0", optional = true }
 num-format = { version = "0.4.4", optional = true }
 num-traits = { version = "0.2.19", optional = true }
 web-time = "1.1.0"
 
 [dependencies.iced]
-#git = "https://github.com/iced-rs/iced.git"
-#rev = "b474a2b7a763dcde6a377cb409001a7b5285ee8d"
-version = "0.13.1"
+git = "https://github.com/iced-rs/iced.git"
+rev = "89f480bdae951a31944302777b759661ec3c3e83"
+version = "0.14.0-dev"
 default-features = false
 features = ["advanced"]
 
@@ -83,9 +83,9 @@ rand = "0.9.0"            # For wrap example
 getrandom = { version = "0.3.1", features = ["wasm_js"]}
 
 [dev-dependencies.iced]
-#git = "https://github.com/iced-rs/iced.git"
-#rev = "b474a2b7a763dcde6a377cb409001a7b5285ee8d"
-version = "0.13.0"
+git = "https://github.com/iced-rs/iced.git"
+rev = "89f480bdae951a31944302777b759661ec3c3e83"
+version = "0.14.0-dev"
 #default-features = false
 features = ["advanced", "wgpu"]
 
@@ -163,3 +163,8 @@ required-features = ["wrap", "number_input"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
+
+[patch.crates-io]
+iced = {git = "https://github.com/iced-rs/iced.git", rev = "89f480bdae951a31944302777b759661ec3c3e83"}
+iced_core = {git = "https://github.com/iced-rs/iced.git", rev = "89f480bdae951a31944302777b759661ec3c3e83"}
+iced_widget= {git = "https://github.com/iced-rs/iced.git", rev = "89f480bdae951a31944302777b759661ec3c3e83"}

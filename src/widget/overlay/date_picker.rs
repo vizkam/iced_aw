@@ -39,12 +39,11 @@ use iced::{
     Point,
     Rectangle,
     Renderer, // the actual type
-    Shadow,
     Size,
 };
 use iced_fonts::{
-    required::{icon_to_string, RequiredIcons},
-    REQUIRED_FONT,
+    bootstrap::{caret_left_fill, caret_right_fill, check, x},
+    BOOTSTRAP_FONT,
 };
 use std::collections::HashMap;
 
@@ -109,19 +108,16 @@ where
         DatePickerOverlay {
             state: overlay_state,
             cancel_button: Button::new(
-                text::Text::new(icon_to_string(RequiredIcons::X))
-                    .font(REQUIRED_FONT)
-                    .size(font_size)
-                    .align_x(Horizontal::Center)
+                x().size(font_size)
+                    .align_x(text::Alignment::Center)
                     .width(Length::Fill),
             )
             .width(Length::Fill)
             .on_press(on_cancel.clone()),
             submit_button: Button::new(
-                text::Text::new(icon_to_string(RequiredIcons::Check))
-                    .font(REQUIRED_FONT)
+                check()
                     .size(font_size)
-                    .align_x(Horizontal::Center)
+                    .align_x(text::Alignment::Center)
                     .width(Length::Fill),
             )
             .width(Length::Fill)
@@ -146,15 +142,14 @@ where
     }
 
     /// The event handling for the month / year bar.
-    fn on_event_month_year(
+    fn update_month_year(
         &mut self,
         event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
-    ) -> event::Status {
+        shell: &mut Shell<Message>,
+    ) {
         let mut children = layout.children();
-
-        let mut status = event::Status::Ignored;
 
         // ----------- Month ----------------------
         let month_layout = children
@@ -184,10 +179,10 @@ where
 
                 if cursor.is_over(left_bounds) {
                     self.state.date = crate::core::date::pred_month(self.state.date);
-                    status = event::Status::Captured;
+                    shell.capture_event();
                 } else if cursor.is_over(right_bounds) {
                     self.state.date = crate::core::date::succ_month(self.state.date);
-                    status = event::Status::Captured;
+                    shell.capture_event();
                 }
             }
             _ => {}
@@ -221,32 +216,29 @@ where
 
                 if cursor.is_over(left_bounds) {
                     self.state.date = crate::core::date::pred_year(self.state.date);
-                    status = event::Status::Captured;
+                    shell.capture_event();
                 } else if cursor.is_over(right_bounds) {
                     self.state.date = crate::core::date::succ_year(self.state.date);
-                    status = event::Status::Captured;
+                    shell.capture_event();
                 }
             }
             _ => {}
         }
-
-        status
     }
 
     /// The event handling for the calendar days.
-    fn on_event_days(
+    fn update_days(
         &mut self,
         event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
-    ) -> event::Status {
+        shell: &mut Shell<Message>,
+    ) {
         let mut children = layout.children();
 
         let _day_labels_layout = children
             .next()
             .expect("widget: Layout should have a day label layout");
-
-        let mut status = event::Status::Ignored;
 
         match event {
             Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
@@ -282,7 +274,7 @@ where
                                     .expect("Succeeding month with day should be valid"),
                             };
 
-                            status = event::Status::Captured;
+                            shell.capture_event();
                             break 'outer;
                         }
                     }
@@ -290,19 +282,15 @@ where
             }
             _ => {}
         }
-
-        status
     }
 
     /// The event handling for the keyboard input.
-    fn on_event_keyboard(&mut self, event: &Event) -> event::Status {
+    fn update_keyboard(&mut self, event: &Event, shell: &mut Shell<Message>) {
         if self.state.focus == Focus::None {
-            return event::Status::Ignored;
+            return;
         }
 
         if let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event {
-            let mut status = event::Status::Ignored;
-
             match key.as_ref() {
                 keyboard::Key::Named(keyboard::key::Named::Tab) => {
                     if self.state.keyboard_modifiers.shift() {
@@ -315,41 +303,41 @@ where
                     Focus::Month => match k {
                         keyboard::key::Named::ArrowLeft => {
                             self.state.date = crate::core::date::pred_month(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         keyboard::key::Named::ArrowRight => {
                             self.state.date = crate::core::date::succ_month(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         _ => {}
                     },
                     Focus::Year => match k {
                         keyboard::key::Named::ArrowLeft => {
                             self.state.date = crate::core::date::pred_year(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         keyboard::key::Named::ArrowRight => {
                             self.state.date = crate::core::date::succ_year(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         _ => {}
                     },
                     Focus::Day => match k {
                         keyboard::key::Named::ArrowLeft => {
                             self.state.date = crate::core::date::pred_day(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         keyboard::key::Named::ArrowRight => {
                             self.state.date = crate::core::date::succ_day(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         keyboard::key::Named::ArrowUp => {
                             self.state.date = crate::core::date::pred_week(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         keyboard::key::Named::ArrowDown => {
                             self.state.date = crate::core::date::succ_week(self.state.date);
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         _ => {}
                     },
@@ -357,13 +345,8 @@ where
                 },
                 _ => {}
             }
-
-            status
         } else if let Event::Keyboard(keyboard::Event::ModifiersChanged(modifiers)) = event {
             self.state.keyboard_modifiers = *modifiers;
-            event::Status::Ignored
-        } else {
-            event::Status::Ignored
         }
     }
 }
@@ -407,13 +390,9 @@ where
                     .align_y(Alignment::Center)
                     .push(
                         // Left Month arrow
-                        Container::new(
-                            Text::new(icon_to_string(RequiredIcons::CaretLeftFill))
-                                .size(font_size.0 + 1.0)
-                                .font(REQUIRED_FONT),
-                        )
-                        .height(Length::Shrink)
-                        .width(Length::Shrink),
+                        Container::new(caret_left_fill().size(font_size.0 + 1.0))
+                            .height(Length::Shrink)
+                            .width(Length::Shrink),
                     )
                     .push(
                         // Month
@@ -421,13 +400,9 @@ where
                     )
                     .push(
                         // Right Month arrow
-                        Container::new(
-                            Text::new(icon_to_string(RequiredIcons::CaretRightFill))
-                                .size(font_size.0 + 1.0)
-                                .font(REQUIRED_FONT),
-                        )
-                        .height(Length::Shrink)
-                        .width(Length::Shrink),
+                        Container::new(caret_right_fill().size(font_size.0 + 1.0))
+                            .height(Length::Shrink)
+                            .width(Length::Shrink),
                     ),
             )
             .push(
@@ -437,13 +412,9 @@ where
                     .align_y(Alignment::Center)
                     .push(
                         // Left Year arrow
-                        Container::new(
-                            Text::new(icon_to_string(RequiredIcons::CaretLeftFill))
-                                .size(font_size.0 + 1.0)
-                                .font(REQUIRED_FONT),
-                        )
-                        .height(Length::Shrink)
-                        .width(Length::Shrink),
+                        Container::new(caret_left_fill().size(font_size.0 + 1.0))
+                            .height(Length::Shrink)
+                            .width(Length::Shrink),
                     )
                     .push(
                         // Year
@@ -451,13 +422,9 @@ where
                     )
                     .push(
                         // Right Year arrow
-                        Container::new(
-                            Text::new(icon_to_string(RequiredIcons::CaretRightFill))
-                                .size(font_size.0 + 1.0)
-                                .font(REQUIRED_FONT),
-                        )
-                        .height(Length::Shrink)
-                        .width(Length::Shrink),
+                        Container::new(caret_right_fill().size(font_size.0 + 1.0))
+                            .height(Length::Shrink)
+                            .width(Length::Shrink),
                     ),
             );
 
@@ -550,18 +517,16 @@ where
         node
     }
 
-    fn on_event(
+    fn update(
         &mut self,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<Message>,
-    ) -> event::Status {
-        if event::Status::Captured == self.on_event_keyboard(&event) {
-            return event::Status::Captured;
-        }
+    ) {
+        self.update_keyboard(&event, shell);
 
         let mut children = layout.children();
 
@@ -574,7 +539,7 @@ where
         let month_year_layout = date_children
             .next()
             .expect("widget: Layout should have a month/year layout");
-        let month_year_status = self.on_event_month_year(&event, month_year_layout, cursor);
+        self.update_month_year(&event, month_year_layout, cursor, shell);
 
         // ----------- Days ----------------------
         let days_layout = date_children
@@ -583,16 +548,16 @@ where
             .children()
             .next()
             .expect("widget: Layout should have a days table layout");
-        let days_status = self.on_event_days(&event, days_layout, cursor);
+        self.update_days(&event, days_layout, cursor, shell);
 
         // ----------- Buttons ------------------------
         let cancel_button_layout = children
             .next()
             .expect("widget: Layout should have a cancel button layout for a DatePicker");
 
-        let cancel_status = self.cancel_button.on_event(
+        self.cancel_button.update(
             &mut self.tree.children[0],
-            event.clone(),
+            event,
             cancel_button_layout,
             cursor,
             renderer,
@@ -607,7 +572,7 @@ where
 
         let mut fake_messages: Vec<Message> = Vec::new();
 
-        let submit_status = self.submit_button.on_event(
+        self.submit_button.update(
             &mut self.tree.children[1],
             event,
             submit_button_layout,
@@ -621,18 +586,12 @@ where
         if !fake_messages.is_empty() {
             shell.publish((self.on_submit)(self.state.date.into()));
         }
-
-        month_year_status
-            .merge(days_status)
-            .merge(cancel_status)
-            .merge(submit_status)
     }
 
     fn mouse_interaction(
         &self,
         layout: Layout<'_>,
         cursor: Cursor,
-        viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
         let mouse_interaction = mouse::Interaction::default();
@@ -716,7 +675,7 @@ where
             &self.tree.children[0],
             cancel_button_layout,
             cursor,
-            viewport,
+            &layout.bounds(),
             renderer,
         );
 
@@ -728,7 +687,7 @@ where
             &self.tree.children[1],
             submit_button_layout,
             cursor,
-            viewport,
+            &layout.bounds(),
             renderer,
         );
 
@@ -791,7 +750,7 @@ where
                         width: style_sheet[&style_state].border_width,
                         color: style_sheet[&style_state].border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 style_sheet[&style_state].background,
             );
@@ -873,7 +832,7 @@ where
                         width: style_sheet[&StyleState::Focused].border_width,
                         color: style_sheet[&StyleState::Focused].border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 Color::TRANSPARENT,
             );
@@ -892,7 +851,7 @@ where
                         width: style_sheet[&StyleState::Focused].border_width,
                         color: style_sheet[&StyleState::Focused].border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 Color::TRANSPARENT,
             );
@@ -956,18 +915,10 @@ where
 {
     fn default() -> Self {
         Self {
-            cancel_button: Button::new(
-                text::Text::new(icon_to_string(RequiredIcons::X))
-                    .font(REQUIRED_FONT)
-                    .align_x(Horizontal::Center)
-                    .width(Length::Fill),
-            )
-            .into(),
+            cancel_button: Button::new(x().align_x(text::Alignment::Center).width(Length::Fill))
+                .into(),
             submit_button: Button::new(
-                text::Text::new(icon_to_string(RequiredIcons::Check))
-                    .font(REQUIRED_FONT)
-                    .align_x(Horizontal::Center)
-                    .width(Length::Fill),
+                check().align_x(text::Alignment::Center).width(Length::Fill),
             )
             .into(),
         }
@@ -1155,7 +1106,7 @@ fn month_year(
                             .expect("Style Sheet not found.")
                             .border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 style
                     .get(&style_state)
@@ -1167,12 +1118,12 @@ fn month_year(
         // Left caret
         renderer.fill_text(
             iced::advanced::Text {
-                content: icon_to_string(RequiredIcons::CaretLeftFill),
+                content: char::from_u32(0xF22D).unwrap().to_string(),
                 bounds: Size::new(left_bounds.width, left_bounds.height),
                 size: Pixels(font_size.0 + if left_arrow_hovered { 1.0 } else { 0.0 }),
-                font: REQUIRED_FONT,
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                font: BOOTSTRAP_FONT,
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: text::LineHeight::Relative(1.3),
                 shaping: text::Shaping::Advanced,
                 wrapping: Wrapping::default(),
@@ -1192,8 +1143,8 @@ fn month_year(
                 bounds: Size::new(center_bounds.width, center_bounds.height),
                 size: font_size,
                 font: renderer.default_font(),
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: text::LineHeight::Relative(1.3),
                 shaping: text::Shaping::Basic,
                 wrapping: Wrapping::default(),
@@ -1209,12 +1160,12 @@ fn month_year(
         // Right caret
         renderer.fill_text(
             iced::advanced::Text {
-                content: icon_to_string(RequiredIcons::CaretRightFill),
+                content: char::from_u32(0xF231).unwrap().to_string(),
                 bounds: Size::new(right_bounds.width, right_bounds.height),
                 size: Pixels(font_size.0 + if right_arrow_hovered { 1.0 } else { 0.0 }),
-                font: REQUIRED_FONT,
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                font: BOOTSTRAP_FONT,
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: text::LineHeight::Relative(1.3),
                 shaping: text::Shaping::Advanced,
                 wrapping: Wrapping::default(),
@@ -1283,8 +1234,8 @@ fn day_labels(
                 bounds: Size::new(bounds.width, bounds.height),
                 size: font_size,
                 font: renderer.default_font(),
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: text::LineHeight::Relative(1.3),
                 shaping: text::Shaping::Basic,
                 wrapping: Wrapping::default(),
@@ -1336,7 +1287,7 @@ fn day_table(
                             width: 0.0,
                             color: Color::TRANSPARENT,
                         },
-                        shadow: Shadow::default(),
+                        ..Default::default()
                     },
                     style
                         .get(&style_state)
@@ -1363,7 +1314,7 @@ fn day_table(
                                     .expect("Style Sheet not found.")
                                     .border_color,
                             },
-                            shadow: Shadow::default(),
+                            ..Default::default()
                         },
                         Color::TRANSPARENT,
                     );
@@ -1376,8 +1327,8 @@ fn day_table(
                     bounds: Size::new(bounds.width, bounds.height),
                     size: font_size,
                     font: renderer.default_font(),
-                    horizontal_alignment: Horizontal::Center,
-                    vertical_alignment: Vertical::Center,
+                    align_x: text::Alignment::Center,
+                    align_y: Vertical::Center,
                     line_height: text::LineHeight::Relative(1.3),
                     shaping: text::Shaping::Basic,
                     wrapping: Wrapping::default(),

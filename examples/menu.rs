@@ -12,13 +12,12 @@ use iced_aw::menu::{self, Item, Menu};
 use iced_aw::style::{menu_bar::primary, Status};
 use iced_aw::{menu_bar, menu_items};
 use iced_aw::{quad, widgets::InnerBounds};
-use iced_fonts::required::{icon_to_string, RequiredIcons};
-use iced_fonts::REQUIRED_FONT;
+use iced_fonts::bootstrap::caret_right_fill;
 
 pub fn main() -> iced::Result {
-    iced::application(App::title, App::update, App::view)
+    iced::application(App::default, App::update, App::view)
         .theme(App::theme)
-        .font(iced_fonts::REQUIRED_FONT_BYTES)
+        .title(App::title)
         .window_size(Size::new(1000.0, 600.0))
         .run()
 }
@@ -48,7 +47,7 @@ struct App {
 impl Default for App {
     fn default() -> Self {
         let theme = iced::Theme::custom(
-            "Custom Theme".into(),
+            "Custom Theme",
             theme::Palette {
                 primary: Color::from([0.45, 0.25, 0.57]),
                 ..iced::Theme::Light.palette()
@@ -91,7 +90,7 @@ impl App {
             }
             Message::ColorChange(c) => {
                 self.theme = iced::Theme::custom(
-                    "Color Change".into(),
+                    "Color Change",
                     theme::Palette {
                         primary: c,
                         ..self.theme.palette()
@@ -104,7 +103,7 @@ impl App {
                 let primary = self.theme.palette().primary;
                 if b {
                     self.theme = iced::Theme::custom(
-                        "Dark".into(),
+                        "Dark",
                         theme::Palette {
                             primary,
                             ..iced::Theme::Dark.palette()
@@ -112,7 +111,7 @@ impl App {
                     )
                 } else {
                     self.theme = iced::Theme::custom(
-                        "Light".into(),
+                        "Light",
                         theme::Palette {
                             primary,
                             ..iced::Theme::Light.palette()
@@ -493,8 +492,7 @@ fn submenu_button(label: &str) -> button::Button<Message, iced::Theme, iced::Ren
             text(label)
                 .width(Length::Fill)
                 .align_y(alignment::Vertical::Center),
-            text(icon_to_string(RequiredIcons::CaretRightFill))
-                .font(REQUIRED_FONT)
+            caret_right_fill()
                 .width(Length::Shrink)
                 .align_y(alignment::Vertical::Center),
         ]

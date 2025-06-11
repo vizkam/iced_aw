@@ -29,13 +29,10 @@ use iced::{
         text::{self, Wrapping},
         Button, Column, Row,
     },
-    Alignment, Border, Color, Element, Event, Length, Padding, Pixels, Point, Rectangle, Renderer,
-    Shadow, Size, Vector,
+    Alignment, Border, Color, Element, Event, Font, Length, Padding, Pixels, Point, Rectangle,
+    Renderer, Shadow, Size, Vector,
 };
-use iced_fonts::{
-    required::{icon_to_string, RequiredIcons},
-    REQUIRED_FONT,
-};
+use iced_fonts::bootstrap::{check, x};
 use std::collections::HashMap;
 
 /// The padding around the elements.
@@ -98,19 +95,11 @@ where
 
         ColorPickerOverlay {
             state: overlay_state,
-            cancel_button: Button::new(
-                iced::widget::Text::new(icon_to_string(RequiredIcons::X))
-                    .align_x(Horizontal::Center)
-                    .width(Length::Fill)
-                    .font(REQUIRED_FONT),
-            )
-            .width(Length::Fill)
-            .on_press(on_cancel.clone()),
+            cancel_button: Button::new(x().align_x(text::Alignment::Center).width(Length::Fill))
+                .width(Length::Fill)
+                .on_press(on_cancel.clone()),
             submit_button: Button::new(
-                iced::widget::Text::new(icon_to_string(RequiredIcons::Check))
-                    .align_x(Horizontal::Center)
-                    .width(Length::Fill)
-                    .font(REQUIRED_FONT),
+                check().align_x(text::Alignment::Center).width(Length::Fill),
             )
             .width(Length::Fill)
             .on_press(on_cancel), // Sending a fake message
@@ -133,12 +122,13 @@ where
     }
 
     /// The event handling for the HSV color area.
-    fn on_event_hsv_color(
+    fn update_hsv_color(
         &mut self,
         event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
-    ) -> event::Status {
+        shell: &mut Shell<Message>,
+    ) {
         let mut hsv_color_children = layout.children();
 
         let hsv_color: Hsv = self.state.color.into();
@@ -238,20 +228,19 @@ where
         }
 
         if color_changed {
-            event::Status::Captured
-        } else {
-            event::Status::Ignored
+            shell.capture_event();
         }
     }
 
     /// The event handling for the RGBA color area.
     #[allow(clippy::too_many_lines)]
-    fn on_event_rgba_color(
+    fn update_rgba_color(
         &mut self,
         event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
-    ) -> event::Status {
+        shell: &mut Shell<Message>,
+    ) {
         let mut rgba_color_children = layout.children();
         let mut color_changed = false;
 
@@ -407,21 +396,17 @@ where
         }
 
         if color_changed {
-            event::Status::Captured
-        } else {
-            event::Status::Ignored
+            shell.capture_event();
         }
     }
 
     /// The even handling for the keyboard input.
-    fn on_event_keyboard(&mut self, event: &Event) -> event::Status {
+    fn update_keyboard(&mut self, event: &Event, shell: &mut Shell<Message>) {
         if self.state.focus == Focus::None {
-            return event::Status::Ignored;
+            return;
         }
 
         if let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event {
-            let mut status = event::Status::Ignored;
-
             if matches!(key, keyboard::Key::Named(keyboard::key::Named::Tab)) {
                 if self.state.keyboard_modifiers.shift() {
                     self.state.focus = self.state.focus.previous();
@@ -431,43 +416,45 @@ where
                 // TODO: maybe place this better
                 self.clear_cache();
             } else {
-                let sat_value_handle = |key_code: &keyboard::Key, color: &mut Color| {
-                    let mut hsv_color: Hsv = (*color).into();
-                    let mut status = event::Status::Ignored;
+                let sat_value_handle =
+                    |key_code: &keyboard::Key,
+                     color: &mut Color,
+                     shell: &mut Shell<'_, Message>| {
+                        let mut hsv_color: Hsv = (*color).into();
 
-                    match key_code {
-                        keyboard::Key::Named(keyboard::key::Named::ArrowLeft) => {
-                            hsv_color.saturation -= SAT_VALUE_STEP;
-                            status = event::Status::Captured;
+                        match key_code {
+                            keyboard::Key::Named(keyboard::key::Named::ArrowLeft) => {
+                                hsv_color.saturation -= SAT_VALUE_STEP;
+                                shell.capture_event();
+                            }
+                            keyboard::Key::Named(keyboard::key::Named::ArrowRight) => {
+                                hsv_color.saturation += SAT_VALUE_STEP;
+                                shell.capture_event();
+                            }
+                            keyboard::Key::Named(keyboard::key::Named::ArrowUp) => {
+                                hsv_color.value -= SAT_VALUE_STEP;
+                                shell.capture_event();
+                            }
+                            keyboard::Key::Named(keyboard::key::Named::ArrowDown) => {
+                                hsv_color.value += SAT_VALUE_STEP;
+                                shell.capture_event();
+                            }
+                            _ => {}
                         }
-                        keyboard::Key::Named(keyboard::key::Named::ArrowRight) => {
-                            hsv_color.saturation += SAT_VALUE_STEP;
-                            status = event::Status::Captured;
-                        }
-                        keyboard::Key::Named(keyboard::key::Named::ArrowUp) => {
-                            hsv_color.value -= SAT_VALUE_STEP;
-                            status = event::Status::Captured;
-                        }
-                        keyboard::Key::Named(keyboard::key::Named::ArrowDown) => {
-                            hsv_color.value += SAT_VALUE_STEP;
-                            status = event::Status::Captured;
-                        }
-                        _ => {}
-                    }
 
-                    hsv_color.saturation = hsv_color.saturation.clamp(0.0, 1.0);
-                    hsv_color.value = hsv_color.value.clamp(0.0, 1.0);
+                        hsv_color.saturation = hsv_color.saturation.clamp(0.0, 1.0);
+                        hsv_color.value = hsv_color.value.clamp(0.0, 1.0);
 
-                    *color = Color {
-                        a: color.a,
-                        ..hsv_color.into()
+                        *color = Color {
+                            a: color.a,
+                            ..hsv_color.into()
+                        };
                     };
-                    status
-                };
 
-                let hue_handle = |key_code: &keyboard::Key, color: &mut Color| {
+                let hue_handle = |key_code: &keyboard::Key,
+                                  color: &mut Color,
+                                  shell: &mut Shell<'_, Message>| {
                     let mut hsv_color: Hsv = (*color).into();
-                    let mut status = event::Status::Ignored;
 
                     let mut value = i32::from(hsv_color.hue);
 
@@ -476,13 +463,13 @@ where
                             keyboard::key::Named::ArrowLeft | keyboard::key::Named::ArrowDown,
                         ) => {
                             value -= HUE_STEP;
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         keyboard::Key::Named(
                             keyboard::key::Named::ArrowRight | keyboard::key::Named::ArrowUp,
                         ) => {
                             value += HUE_STEP;
-                            status = event::Status::Captured;
+                            shell.capture_event();
                         }
                         _ => {}
                     }
@@ -493,51 +480,41 @@ where
                         a: color.a,
                         ..hsv_color.into()
                     };
-
-                    status
                 };
 
-                let rgba_bar_handle = |key_code: &keyboard::Key, value: &mut f32| {
-                    let mut byte_value = (*value * 255.0) as i16;
-                    let mut status = event::Status::Captured;
+                let rgba_bar_handle =
+                    |key_code: &keyboard::Key, value: &mut f32, shell: &mut Shell<'_, Message>| {
+                        let mut byte_value = (*value * 255.0) as i16;
 
-                    match key_code {
-                        keyboard::Key::Named(
-                            keyboard::key::Named::ArrowLeft | keyboard::key::Named::ArrowDown,
-                        ) => {
-                            byte_value -= RGBA_STEP;
-                            status = event::Status::Captured;
+                        match key_code {
+                            keyboard::Key::Named(
+                                keyboard::key::Named::ArrowLeft | keyboard::key::Named::ArrowDown,
+                            ) => {
+                                byte_value -= RGBA_STEP;
+                            }
+                            keyboard::Key::Named(
+                                keyboard::key::Named::ArrowRight | keyboard::key::Named::ArrowUp,
+                            ) => {
+                                byte_value += RGBA_STEP;
+                            }
+                            _ => {}
                         }
-                        keyboard::Key::Named(
-                            keyboard::key::Named::ArrowRight | keyboard::key::Named::ArrowUp,
-                        ) => {
-                            byte_value += RGBA_STEP;
-                            status = event::Status::Captured;
-                        }
-                        _ => {}
-                    }
-                    *value = f32::from(byte_value.clamp(0, 255)) / 255.0;
-
-                    status
-                };
+                        *value = f32::from(byte_value.clamp(0, 255)) / 255.0;
+                        shell.capture_event();
+                    };
 
                 match self.state.focus {
-                    Focus::SatValue => status = sat_value_handle(key, &mut self.state.color),
-                    Focus::Hue => status = hue_handle(key, &mut self.state.color),
-                    Focus::Red => status = rgba_bar_handle(key, &mut self.state.color.r),
-                    Focus::Green => status = rgba_bar_handle(key, &mut self.state.color.g),
-                    Focus::Blue => status = rgba_bar_handle(key, &mut self.state.color.b),
-                    Focus::Alpha => status = rgba_bar_handle(key, &mut self.state.color.a),
+                    Focus::SatValue => sat_value_handle(key, &mut self.state.color, shell),
+                    Focus::Hue => hue_handle(key, &mut self.state.color, shell),
+                    Focus::Red => rgba_bar_handle(key, &mut self.state.color.r, shell),
+                    Focus::Green => rgba_bar_handle(key, &mut self.state.color.g, shell),
+                    Focus::Blue => rgba_bar_handle(key, &mut self.state.color.b, shell),
+                    Focus::Alpha => rgba_bar_handle(key, &mut self.state.color.a, shell),
                     _ => {}
                 }
             }
-
-            status
         } else if let Event::Keyboard(keyboard::Event::ModifiersChanged(modifiers)) = event {
             self.state.keyboard_modifiers = *modifiers;
-            event::Status::Ignored
-        } else {
-            event::Status::Ignored
         }
     }
 }
@@ -615,29 +592,28 @@ where
         node
     }
 
-    fn on_event(
+    fn update(
         &mut self,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: Cursor,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<Message>,
-    ) -> event::Status {
-        if event::Status::Captured == self.on_event_keyboard(&event) {
+    ) {
+        self.update_keyboard(event, shell);
+        if shell.is_event_captured() {
             self.clear_cache();
-            return event::Status::Captured;
+            return;
         }
 
         let mut children = layout.children();
-
-        let status = event::Status::Ignored;
 
         // ----------- Block 1 ----------------------
         let block1_layout = children
             .next()
             .expect("widget: Layout should have a 1. block layout");
-        let hsv_color_status = self.on_event_hsv_color(&event, block1_layout, cursor);
+        self.update_hsv_color(&event, block1_layout, cursor, shell);
         // ----------- Block 1 end ------------------
 
         // ----------- Block 2 ----------------------
@@ -650,7 +626,12 @@ where
         let rgba_color_layout = block2_children
             .next()
             .expect("widget: Layout should have a RGBA color layout");
-        let rgba_color_status = self.on_event_rgba_color(&event, rgba_color_layout, cursor);
+        self.update_rgba_color(&event, rgba_color_layout, cursor, shell);
+
+        if shell.is_event_captured() {
+            self.clear_cache();
+            return;
+        }
 
         let mut fake_messages: Vec<Message> = Vec::new();
 
@@ -663,9 +644,9 @@ where
         let cancel_button_layout = block2_children
             .next()
             .expect("widget: Layout should have a cancel button layout for a ColorPicker");
-        let cancel_button_status = self.cancel_button.on_event(
+        self.cancel_button.update(
             &mut self.tree.children[0],
-            event.clone(),
+            event,
             cancel_button_layout,
             cursor,
             renderer,
@@ -677,7 +658,7 @@ where
         let submit_button_layout = block2_children
             .next()
             .expect("widget: Layout should have a submit button layout for a ColorPicker");
-        let submit_button_status = self.submit_button.on_event(
+        self.submit_button.update(
             &mut self.tree.children[1],
             event,
             submit_button_layout,
@@ -691,26 +672,12 @@ where
         if !fake_messages.is_empty() {
             shell.publish((self.on_submit)(self.state.color));
         }
-        // ----------- Block 2 end ------------------
-
-        if hsv_color_status == event::Status::Captured
-            || rgba_color_status == event::Status::Captured
-        {
-            self.clear_cache();
-        }
-
-        status
-            .merge(hsv_color_status)
-            .merge(rgba_color_status)
-            .merge(cancel_button_status)
-            .merge(submit_button_status)
     }
 
     fn mouse_interaction(
         &self,
         layout: Layout<'_>,
         cursor: Cursor,
-        viewport: &Rectangle,
         renderer: &Renderer,
     ) -> mouse::Interaction {
         let mut children = layout.children();
@@ -790,7 +757,7 @@ where
             &self.tree.children[1],
             cancel_button_layout,
             cursor,
-            viewport,
+            &layout.bounds(),
             renderer,
         );
 
@@ -801,7 +768,7 @@ where
             &self.tree.children[1],
             submit_button_layout,
             cursor,
-            viewport,
+            &layout.bounds(),
             renderer,
         );
 
@@ -858,7 +825,7 @@ where
                         width: style_sheet[&style_state].border_width,
                         color: style_sheet[&style_state].border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 style_sheet[&style_state].background,
             );
@@ -1178,7 +1145,7 @@ fn block2<Message, Theme>(
                         width: style_sheet[&StyleState::Focused].border_width,
                         color: style_sheet[&StyleState::Focused].border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 Color::TRANSPARENT,
             );
@@ -1196,7 +1163,7 @@ fn block2<Message, Theme>(
                         width: style_sheet[&StyleState::Focused].border_width,
                         color: style_sheet[&StyleState::Focused].border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 Color::TRANSPARENT,
             );
@@ -1426,9 +1393,9 @@ fn rgba_color(
                 content: label.to_owned(),
                 bounds: Size::new(label_layout.bounds().width, label_layout.bounds().height),
                 size: renderer.default_size(),
-                font: REQUIRED_FONT,
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                font: renderer.default_font(),
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: text::LineHeight::Relative(1.3),
                 shaping: text::Shaping::Advanced,
                 wrapping: Wrapping::default(),
@@ -1472,7 +1439,7 @@ fn rgba_color(
                             .bar_border_width,
                         color: Color::TRANSPARENT,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 color,
             );
@@ -1498,7 +1465,7 @@ fn rgba_color(
                             .expect("Style Sheet not found.")
                             .bar_border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 Color::TRANSPARENT,
             );
@@ -1511,8 +1478,8 @@ fn rgba_color(
                 bounds: Size::new(value_layout.bounds().width, value_layout.bounds().height),
                 size: renderer.default_size(),
                 font: renderer.default_font(),
-                horizontal_alignment: Horizontal::Center,
-                vertical_alignment: Vertical::Center,
+                align_x: text::Alignment::Center,
+                align_y: Vertical::Center,
                 line_height: iced::widget::text::LineHeight::Relative(1.3),
                 shaping: iced::widget::text::Shaping::Advanced,
                 wrapping: Wrapping::default(),
@@ -1545,7 +1512,7 @@ fn rgba_color(
                             .expect("Style Sheet not found.")
                             .border_color,
                     },
-                    shadow: Shadow::default(),
+                    ..Default::default()
                 },
                 Color::TRANSPARENT,
             );
@@ -1641,7 +1608,7 @@ fn hex_text(
                     width: style_sheet[&hex_text_style_state].bar_border_width,
                     color: style_sheet[&hex_text_style_state].bar_border_color,
                 },
-                shadow: Shadow::default(),
+                ..Default::default()
             },
             *color,
         );
@@ -1653,8 +1620,8 @@ fn hex_text(
             bounds: Size::new(bounds.width, bounds.height),
             size: renderer.default_size(),
             font: renderer.default_font(),
-            horizontal_alignment: Horizontal::Center,
-            vertical_alignment: Vertical::Center,
+            align_x: text::Alignment::Center,
+            align_y: Vertical::Center,
             line_height: text::LineHeight::Relative(1.3),
             shaping: text::Shaping::Basic,
             wrapping: Wrapping::default(),
@@ -1758,14 +1725,8 @@ where
 {
     fn default() -> Self {
         Self {
-            cancel_button: Button::new(
-                widget::Text::new(icon_to_string(RequiredIcons::X)).font(REQUIRED_FONT),
-            )
-            .into(),
-            submit_button: Button::new(
-                widget::Text::new(icon_to_string(RequiredIcons::Check)).font(REQUIRED_FONT),
-            )
-            .into(),
+            cancel_button: Button::new(x()).into(),
+            submit_button: Button::new(check()).into(),
         }
     }
 }
