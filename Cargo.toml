@@ -61,7 +61,7 @@ default = [
 [dependencies]
 cfg-if = "1.0"
 chrono = { version = "0.4.39", optional = true, features = ["wasmbind"] }
-iced_fonts = {git = "https://github.com/Redhawk18/iced_fonts.git", rev="376214da4fe5d01aa45b3043c75c97168ea23e07", features = ["bootstrap"]}
+iced_fonts = {git = "https://github.com/vizkam/iced_fonts.git", rev="969e957632040e443c9fa6789a1c43bb71dcc11b", features = ["bootstrap"]}
 itertools = { version = "0.14.0", optional = true }
 num-format = { version = "0.4.4", optional = true }
 num-traits = { version = "0.2.19", optional = true }

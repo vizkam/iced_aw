@@ -1406,7 +1406,7 @@ dependencies = [
 [[package]]
 name = "iced_fonts"
 version = "0.2.0"
-source = "git+https://github.com/Redhawk18/iced_fonts.git?rev=376214da4fe5d01aa45b3043c75c97168ea23e07#376214da4fe5d01aa45b3043c75c97168ea23e07"
+source = "git+https://github.com/vizkam/iced_fonts.git?rev=969e957632040e443c9fa6789a1c43bb71dcc11b#969e957632040e443c9fa6789a1c43bb71dcc11b"
 dependencies = [
  "iced_core",
  "iced_fonts_macros",
@@ -1416,7 +1416,7 @@ dependencies = [
 [[package]]
 name = "iced_fonts_macros"
 version = "0.2.0"
-source = "git+https://github.com/Redhawk18/iced_fonts.git?rev=376214da4fe5d01aa45b3043c75c97168ea23e07#376214da4fe5d01aa45b3043c75c97168ea23e07"
+source = "git+https://github.com/vizkam/iced_fonts.git?rev=969e957632040e443c9fa6789a1c43bb71dcc11b#969e957632040e443c9fa6789a1c43bb71dcc11b"
 dependencies = [
  "iced_core",
  "iced_widget",
